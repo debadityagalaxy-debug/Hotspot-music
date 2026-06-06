@@ -1,13 +1,18 @@
 package com.example.ui.screens
 
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -27,6 +32,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.viewmodel.HostViewModel
 import com.example.utils.NetworkUtils
@@ -47,6 +53,14 @@ fun HostScreen(
     var trackName by remember { mutableStateOf("No song selected") }
     var isPlaying by remember { mutableStateOf(false) }
     
+    var showMusicSheet by remember { mutableStateOf(false) }
+    
+    val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        listOf(android.Manifest.permission.READ_MEDIA_AUDIO)
+    } else {
+        listOf(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+    }
+    
     LaunchedEffect(Unit) {
         viewModel.startServer()
     }
@@ -65,6 +79,17 @@ fun HostScreen(
             trackName = name
             viewModel.setAudio(it, name)
             isPlaying = false
+        }
+    }
+    
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { perms ->
+        if (perms.values.all { it }) {
+            viewModel.fetchLocalSongs()
+            showMusicSheet = true
+        } else {
+            audioPicker.launch(arrayOf("audio/*"))
         }
     }
 
@@ -107,7 +132,17 @@ fun HostScreen(
                 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
-                        onClick = { audioPicker.launch(arrayOf("audio/*")) },
+                        onClick = {
+                            val hasPermission = permissions.all {
+                                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+                            }
+                            if (hasPermission) {
+                                viewModel.fetchLocalSongs()
+                                showMusicSheet = true
+                            } else {
+                                permissionLauncher.launch(permissions.toTypedArray())
+                            }
+                        },
                         modifier = Modifier.background(ThemeSurfaceVariant, CircleShape)
                     ) {
                         Icon(Icons.Default.LibraryMusic, contentDescription = "Add Music", tint = ThemeOnBackground)
@@ -318,6 +353,62 @@ fun HostScreen(
                         
                         IconButton(onClick = { /* Next */ }) {
                             Icon(Icons.Default.SkipNext, contentDescription = null, tint = ThemeOnBackground, modifier = Modifier.size(32.dp))
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    if (showMusicSheet) {
+        val sheetState = rememberModalBottomSheetState()
+        ModalBottomSheet(
+            onDismissRequest = { showMusicSheet = false },
+            sheetState = sheetState,
+            containerColor = ThemeSurface,
+            contentColor = ThemeOnSurface
+        ) {
+            val songs by viewModel.localSongs.collectAsStateWithLifecycle()
+            Column(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+                Text(
+                    "Local Music", 
+                    style = MaterialTheme.typography.titleLarge, 
+                    color = ThemeOnBackground,
+                    modifier = Modifier.padding(16.dp)
+                )
+                if (songs.isEmpty()) {
+                    Text(
+                        "No music found. Use file picker instead?",
+                        color = ThemePrimary,
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .clickable {
+                                showMusicSheet = false
+                                audioPicker.launch(arrayOf("audio/*"))
+                            }
+                    )
+                } else {
+                    LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                        items(songs) { song ->
+                            ListItem(
+                                headlineContent = { Text(song.title, color = ThemeOnBackground, maxLines = 1) },
+                                supportingContent = { Text(song.artist, color = ThemeOnSurfaceVariant, maxLines = 1) },
+                                leadingContent = { 
+                                    Box(
+                                        modifier = Modifier.size(40.dp).background(ThemePrimary.copy(alpha = 0.2f), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(Icons.Default.MusicNote, null, tint = ThemePrimary)
+                                    }
+                                },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                modifier = Modifier.clickable {
+                                    viewModel.setAudio(song.uri, song.title)
+                                    trackName = song.title
+                                    isPlaying = false
+                                    showMusicSheet = false
+                                }
+                            )
                         }
                     }
                 }

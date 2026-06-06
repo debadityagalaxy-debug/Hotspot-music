@@ -24,7 +24,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.viewmodel.ClientViewModel
 import com.example.ui.theme.*
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClientScreen(
@@ -87,7 +86,7 @@ fun ClientScreen(
                     verticalArrangement = Arrangement.Center
                 ) {
                     Icon(
-                        Icons.Default.CellTower, 
+                        Icons.Default.Wifi, 
                         contentDescription = null,
                         tint = ThemePrimary,
                         modifier = Modifier.size(64.dp)
@@ -134,6 +133,8 @@ fun ClientScreen(
                     ) {
                         Text("CONNECT TO HOST", color = ThemeOnPrimary, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     }
+                    // QR code scanning removed for a bit
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             } else {
                 Column(
@@ -173,7 +174,7 @@ fun ClientScreen(
                                     modifier = Modifier
                                         .size(64.dp)
                                         .background(ThemePrimary, CircleShape)
-                                        .shadow(20.dp, CircleShape, spotColor = ThemePrimary)
+                                        .shadow(20.dp, CircleShape)
                                 ) {
                                     Icon(
                                         Icons.Default.MusicNote,

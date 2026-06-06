@@ -18,9 +18,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.util.Collections
 
-class AudioHost(private val context: Context) {
+class AudioHost(private val appContext: Context) {
     private var server: ApplicationEngine? = null
-    val localPlayer: ExoPlayer = ExoPlayer.Builder(context).build()
+    val localPlayer: ExoPlayer = ExoPlayer.Builder(appContext).build()
     
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val sessions = Collections.synchronizedSet(LinkedHashSet<DefaultWebSocketServerSession>())
@@ -46,7 +46,7 @@ class AudioHost(private val context: Context) {
                     }
                     routing {
                         get("/audio") {
-                            val tempFile = File(context.cacheDir, "current_audio.tmp")
+                            val tempFile = File(appContext.cacheDir, "current_audio.tmp")
                             if (tempFile.exists()) {
                                 call.respondFile(tempFile)
                             } else {
@@ -57,11 +57,14 @@ class AudioHost(private val context: Context) {
                             sessions.add(this)
                             _connectedClients.value = sessions.size
                             
+                            val (pos, isPlay) = withContext(Dispatchers.Main) {
+                                Pair(localPlayer.currentPosition, localPlayer.isPlaying)
+                            }
                             val initialMsg = SyncMessage(
                                 type = "STATE",
                                 timestamp = System.currentTimeMillis(),
-                                position = localPlayer.currentPosition,
-                                isPlaying = localPlayer.isPlaying,
+                                position = pos,
+                                isPlaying = isPlay,
                                 trackName = currentTrackName
                             )
                             send(Frame.Text(initialMsg.toJson()))
@@ -72,7 +75,10 @@ class AudioHost(private val context: Context) {
                                         val text = frame.readText()
                                         val msg = SyncMessage.fromJson(text)
                                         if (msg.type == "OFFSET_PING") {
-                                            val reply = SyncMessage("OFFSET_PONG", msg.timestamp, localPlayer.currentPosition, localPlayer.isPlaying)
+                                            val (pos, isPlay) = withContext(Dispatchers.Main) {
+                                                Pair(localPlayer.currentPosition, localPlayer.isPlaying)
+                                            }
+                                            val reply = SyncMessage("OFFSET_PONG", msg.timestamp, pos, isPlay)
                                             send(Frame.Text(reply.toJson()))
                                         }
                                     }
@@ -91,7 +97,10 @@ class AudioHost(private val context: Context) {
                     while (isActive) {
                         delay(2000)
                         if (sessions.isNotEmpty()) {
-                            val msg = SyncMessage("SYNC", System.currentTimeMillis(), localPlayer.currentPosition, localPlayer.isPlaying, currentTrackName)
+                            val (pos, isPlay) = withContext(Dispatchers.Main) {
+                                Pair(localPlayer.currentPosition, localPlayer.isPlaying)
+                            }
+                            val msg = SyncMessage("SYNC", System.currentTimeMillis(), pos, isPlay, currentTrackName)
                             val text = msg.toJson()
                             sessions.forEach { it.send(Frame.Text(text)) }
                         }
@@ -109,8 +118,8 @@ class AudioHost(private val context: Context) {
         
         scope.launch(Dispatchers.IO) {
             try {
-                val tempFile = File(context.cacheDir, "current_audio.tmp")
-                context.contentResolver.openInputStream(uri)?.use { input ->
+                val tempFile = File(appContext.cacheDir, "current_audio.tmp")
+                appContext.contentResolver.openInputStream(uri)?.use { input ->
                     tempFile.outputStream().use { output ->
                         input.copyTo(output)
                     }
@@ -148,7 +157,10 @@ class AudioHost(private val context: Context) {
     
     private fun broadcastState() {
         scope.launch {
-            val msg = SyncMessage("STATE", System.currentTimeMillis(), localPlayer.currentPosition, localPlayer.isPlaying, currentTrackName)
+            val (pos, isPlay) = withContext(Dispatchers.Main) {
+                Pair(localPlayer.currentPosition, localPlayer.isPlaying)
+            }
+            val msg = SyncMessage("STATE", System.currentTimeMillis(), pos, isPlay, currentTrackName)
             val text = msg.toJson()
             sessions.forEach { try { it.send(Frame.Text(text)) } catch(e: Exception) { } }
         }

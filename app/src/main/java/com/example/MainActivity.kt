@@ -54,51 +54,62 @@ class MainActivity : ComponentActivity() {
         
         val lastCrash = prefs.getString("last_crash", null)
 
-        enableEdgeToEdge()
-        setContent {
-            MaterialTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = ThemeBackground
-                ) {
-                    if (lastCrash != null) {
-                        CrashScreen(
-                            crashLog = lastCrash,
-                            onClear = { 
-                                prefs.edit().remove("last_crash").apply()
-                                recreate()
-                            }
-                        )
-                    } else {
-                        val navController = rememberNavController()
-                        NavHost(navController = navController, startDestination = Routes.ROLE_SELECTION) {
-                            composable(Routes.ROLE_SELECTION) {
-                                RoleSelectionScreen(
-                                    onNavigateToHost = { navController.navigate(Routes.HOST_ROOM) },
-                                    onNavigateToClient = { navController.navigate(Routes.CLIENT_ROOM) },
-                                    onNavigateToSettings = { navController.navigate(Routes.SETTINGS) }
-                                )
-                            }
-                            composable(Routes.HOST_ROOM) {
-                                HostScreen(
-                                    viewModel = hostViewModel,
-                                    onNavigateBack = { navController.popBackStack() }
-                                )
-                            }
-                            composable(Routes.CLIENT_ROOM) {
-                                ClientScreen(
-                                    viewModel = clientViewModel,
-                                    onNavigateBack = { navController.popBackStack() }
-                                )
-                            }
-                            composable(Routes.SETTINGS) {
-                                SettingsScreen(
-                                    viewModel = settingsViewModel,
-                                    onNavigateBack = { navController.popBackStack() }
-                                )
+        try {
+            enableEdgeToEdge()
+            setContent {
+                MaterialTheme {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = ThemeBackground
+                    ) {
+                        if (lastCrash != null) {
+                            CrashScreen(
+                                crashLog = lastCrash,
+                                onClear = { 
+                                    prefs.edit().remove("last_crash").apply()
+                                    recreate()
+                                }
+                            )
+                        } else {
+                            val navController = rememberNavController()
+                            NavHost(navController = navController, startDestination = Routes.ROLE_SELECTION) {
+                                composable(Routes.ROLE_SELECTION) {
+                                    RoleSelectionScreen(
+                                        onNavigateToHost = { navController.navigate(Routes.HOST_ROOM) },
+                                        onNavigateToClient = { navController.navigate(Routes.CLIENT_ROOM) },
+                                        onNavigateToSettings = { navController.navigate(Routes.SETTINGS) }
+                                    )
+                                }
+                                composable(Routes.HOST_ROOM) {
+                                    HostScreen(
+                                        viewModel = hostViewModel,
+                                        onNavigateBack = { navController.popBackStack() }
+                                    )
+                                }
+                                composable(Routes.CLIENT_ROOM) {
+                                    ClientScreen(
+                                        viewModel = clientViewModel,
+                                        onNavigateBack = { navController.popBackStack() }
+                                    )
+                                }
+                                composable(Routes.SETTINGS) {
+                                    SettingsScreen(
+                                        viewModel = settingsViewModel,
+                                        onNavigateBack = { navController.popBackStack() }
+                                    )
+                                }
                             }
                         }
                     }
+                }
+            }
+        } catch (e: Exception) {
+            setContent {
+                MaterialTheme {
+                    CrashScreen(
+                        crashLog = e.stackTraceToString(),
+                        onClear = { recreate() }
+                    )
                 }
             }
         }

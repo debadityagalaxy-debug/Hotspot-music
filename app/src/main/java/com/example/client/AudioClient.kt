@@ -88,7 +88,7 @@ class AudioClient(private val context: Context) {
             } catch (e: Exception) {
                 _connectionStatus.value = "Failed: ${e.message}"
             } finally {
-                withContext(Dispatchers.Main) { player.stop() }
+                withContext(NonCancellable + Dispatchers.Main) { player.stop() }
             }
         }
     }

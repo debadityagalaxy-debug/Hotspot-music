@@ -20,14 +20,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.*
 
+import androidx.compose.material.icons.filled.Settings
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RoleSelectionScreen(
     onNavigateToHost: () -> Unit,
-    onNavigateToClient: () -> Unit
+    onNavigateToClient: () -> Unit,
+    onNavigateToSettings: () -> Unit
 ) {
     Scaffold(
-        containerColor = ThemeBackground
+        containerColor = ThemeBackground,
+        floatingActionButton = {
+            FloatingActionButton(onClick = onNavigateToSettings, containerColor = ThemePrimary) {
+                Icon(Icons.Default.Settings, contentDescription = "Settings", tint = ThemeOnPrimary)
+            }
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier

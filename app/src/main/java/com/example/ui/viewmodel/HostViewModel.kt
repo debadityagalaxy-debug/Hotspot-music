@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
 
 class HostViewModel(application: Application) : AndroidViewModel(application) {
     private val audioHost = AudioHost(application)
-
+    
     val connectedClients: StateFlow<Int> = audioHost.connectedClients
     val hostStatus: StateFlow<String> = audioHost.hostStatusMessage
     
@@ -56,39 +56,18 @@ class HostViewModel(application: Application) : AndroidViewModel(application) {
                         list.add(LocalAudio(uri, title, artist, duration))
                     }
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            } catch (e: Exception) {}
             _localSongs.value = list
         }
     }
     
-    fun startServer(port: Int = 8080) {
-        audioHost.startServer(port)
-    }
-
-    fun stopServer() {
-        audioHost.stopServer()
-    }
-
-    fun setAudio(uri: Uri, name: String) {
-        audioHost.setAudio(uri, name)
-    }
-
-    fun play(positionMs: Long = 0) {
-        audioHost.play(positionMs)
-    }
-
-    fun pause(positionMs: Long = 0) {
-        audioHost.pause(positionMs)
-    }
-
-    fun seek(positionMs: Long) {
-        audioHost.seek(positionMs)
-    }
+    fun startServer(port: Int = 8080) { audioHost.startServer(port) }
+    fun setAudio(uri: Uri, title: String) { audioHost.setAudio(uri, title) }
+    fun play(position: Long) { audioHost.play(position) }
+    fun pause(position: Long) { audioHost.pause(position) }
     
     override fun onCleared() {
         super.onCleared()
-        audioHost.stopServer()
+        audioHost.stop()
     }
 }

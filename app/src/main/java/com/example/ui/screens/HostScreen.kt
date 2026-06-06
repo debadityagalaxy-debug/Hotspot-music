@@ -6,7 +6,6 @@ import android.os.Build
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -101,7 +100,6 @@ fun HostScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Top Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -150,7 +148,6 @@ fun HostScreen(
                 }
             }
 
-            // Main Content (Vinyl / Cover Art Section)
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -159,19 +156,16 @@ fun HostScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                // Vinyl Element
                 Box(
                     modifier = Modifier.fillMaxWidth().aspectRatio(1f),
                     contentAlignment = Alignment.Center
                 ) {
-                    // Glow Effect
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .blur(32.dp)
                             .background(ThemePrimary.copy(alpha = 0.1f), CircleShape)
                     )
-                    // Cover Art
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -181,7 +175,6 @@ fun HostScreen(
                             .shadow(24.dp, RoundedCornerShape(40.dp)),
                         contentAlignment = Alignment.Center
                     ) {
-                        // Inner circle
                         Box(
                             modifier = Modifier
                                 .size(128.dp)
@@ -194,7 +187,6 @@ fun HostScreen(
                                     .background(ThemePrimary, CircleShape)
                                     .shadow(20.dp, CircleShape, spotColor = ThemePrimary)
                             ) {
-                                // Add subtle music icon in the center vinyl hole
                                 Icon(
                                     Icons.Default.MusicNote,
                                     contentDescription = null,
@@ -218,7 +210,6 @@ fun HostScreen(
                 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Sync Status Pill
                 Row(
                     modifier = Modifier
                         .background(ThemeSecondaryContainer, CircleShape)
@@ -238,7 +229,6 @@ fun HostScreen(
                 }
             }
 
-            // Connected Devices Section
             Box(
                 modifier = Modifier
                     .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -266,7 +256,6 @@ fun HostScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.Start
                     ) {
-                        // Host Device
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.padding(end = 16.dp)
@@ -283,7 +272,6 @@ fun HostScreen(
                             Text("Host", color = ThemeOnBackground, fontSize = 10.sp)
                         }
                         
-                        // Client Devices placeholder
                         for (i in 0 until connectedClients) {
                              Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -306,7 +294,6 @@ fun HostScreen(
                 }
             }
 
-            // Bottom Controls Container
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -315,7 +302,6 @@ fun HostScreen(
                     .padding(24.dp)
             ) {
                 Column {
-                    // Controls
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 16.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly,

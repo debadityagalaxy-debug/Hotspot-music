@@ -47,7 +47,6 @@ fun ClientScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Top Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -82,7 +81,6 @@ fun ClientScreen(
             }
 
             if (!isConnected) {
-                // Not Connected State
                 Column(
                     modifier = Modifier.fillMaxSize().padding(32.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -138,7 +136,6 @@ fun ClientScreen(
                     }
                 }
             } else {
-                // Connected State (Vinyl Player)
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -147,19 +144,16 @@ fun ClientScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    // Vinyl Element
                     Box(
                         modifier = Modifier.fillMaxWidth().aspectRatio(1f),
                         contentAlignment = Alignment.Center
                     ) {
-                        // Glow Effect
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .blur(32.dp)
                                 .background(ThemePrimary.copy(alpha = 0.1f), CircleShape)
                         )
-                        // Cover Art empty circle shape
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -169,7 +163,6 @@ fun ClientScreen(
                                 .shadow(24.dp, RoundedCornerShape(40.dp)),
                             contentAlignment = Alignment.Center
                         ) {
-                            // Inner circle
                             Box(
                                 modifier = Modifier
                                     .size(128.dp)
@@ -206,7 +199,6 @@ fun ClientScreen(
                     
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Sync Status Pill
                     Row(
                         modifier = Modifier
                             .background(ThemeSecondaryContainer, CircleShape)
@@ -226,7 +218,6 @@ fun ClientScreen(
                     }
                 }
 
-                // Bottom Controls Container
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()

@@ -13,7 +13,6 @@ import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import java.io.File
-import java.time.Duration
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,8 +41,6 @@ class AudioHost(private val context: Context) {
             try {
                 server = embeddedServer(CIO, port = port) {
                     install(WebSockets) {
-                        pingPeriod = Duration.ofSeconds(15)
-                        timeout = Duration.ofSeconds(15)
                         maxFrameSize = Long.MAX_VALUE
                         masking = false
                     }

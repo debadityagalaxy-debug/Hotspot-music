@@ -15,9 +15,7 @@ import kotlin.math.abs
 
 class AudioClient(private val context: Context) {
     private val client = HttpClient(CIO) {
-        install(WebSockets) {
-            pingInterval = 15_000
-        }
+        install(WebSockets)
     }
     
     val player: ExoPlayer = ExoPlayer.Builder(context).build()

@@ -1,0 +1,6 @@
+{
+  "name": "SyncBeat",
+  "description": "Multi-device music synchronization app that allows devices to connect over a local network and play music simultaneously.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

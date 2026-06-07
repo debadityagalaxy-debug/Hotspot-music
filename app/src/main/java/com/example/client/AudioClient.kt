@@ -62,13 +62,20 @@ class AudioClient(private val context: Context) {
                             val msg = SyncMessage.fromJson(frame.readText())
                             when(msg.type) {
                                 "OFFSET_PONG" -> {
-                                    val rtt = System.currentTimeMillis() - msg.timestamp
-                                    _clockOffset.value = (System.currentTimeMillis() - rtt / 2) - msg.timestamp
+                                    val t_c1 = System.currentTimeMillis()
+                                    val t_c0 = msg.position
+                                    val t_h = msg.timestamp
+                                    val rtt = t_c1 - t_c0
+                                    val expectedHostTimeAtTc1 = t_h + rtt / 2
+                                    _clockOffset.value = expectedHostTimeAtTc1 - t_c1
                                 }
                                 "STATE", "SYNC" -> {
                                     withContext(Dispatchers.Main) {
                                         if (msg.trackName != null) _trackName.value = msg.trackName
-                                        val targetPosition = msg.position + _clockOffset.value
+                                        
+                                        val estimatedHostTimeNow = System.currentTimeMillis() + _clockOffset.value
+                                        val messageTransitTime = estimatedHostTimeNow - msg.timestamp
+                                        val targetPosition = msg.position + if (msg.isPlaying) messageTransitTime else 0L
                                         
                                         if (msg.isPlaying && !player.isPlaying) {
                                             player.seekTo(targetPosition)

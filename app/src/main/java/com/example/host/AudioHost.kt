@@ -83,10 +83,7 @@ class AudioHost(private val appContext: Context) {
                                         val text = frame.readText()
                                         val msg = SyncMessage.fromJson(text)
                                         if (msg.type == "OFFSET_PING") {
-                                            val (pos, isPlay) = withContext(Dispatchers.Main) {
-                                                Pair(localPlayer.currentPosition, localPlayer.isPlaying)
-                                            }
-                                            val reply = SyncMessage("OFFSET_PONG", msg.timestamp, pos, isPlay)
+                                            val reply = SyncMessage("OFFSET_PONG", System.currentTimeMillis(), msg.timestamp, false)
                                             send(Frame.Text(reply.toJson()))
                                         }
                                     }

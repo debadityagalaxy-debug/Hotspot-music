@@ -20,7 +20,23 @@ object DiscoveryManager {
     private val _discoveredHostIp = MutableStateFlow<String?>(null)
     val discoveredHostIp: StateFlow<String?> = _discoveredHostIp
 
-    private fun getBroadcastAddress(context: Context): InetAddress {
+    private fun getBroadcastAddresses(context: Context): List<InetAddress> {
+        val addresses = mutableListOf<InetAddress>()
+        try {
+            val interfaces = java.net.NetworkInterface.getNetworkInterfaces()
+            for (intf in interfaces) {
+                if (intf.isLoopback || !intf.isUp) continue
+                for (interfaceAddress in intf.interfaceAddresses) {
+                    val broadcast = interfaceAddress.broadcast
+                    if (broadcast != null) {
+                        addresses.add(broadcast)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        
         try {
             val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
             val dhcp = wifiManager.dhcpInfo
@@ -30,10 +46,17 @@ object DiscoveryManager {
                 for (k in 0..3) {
                     quads[k] = (broadcast shr (k * 8) and 0xFF).toByte()
                 }
-                return InetAddress.getByAddress(quads)
+                val inetAddr = InetAddress.getByAddress(quads)
+                if (!addresses.contains(inetAddr)) {
+                    addresses.add(inetAddr)
+                }
             }
         } catch (e: Exception) {}
-        return InetAddress.getByName("255.255.255.255")
+        
+        if (addresses.isEmpty()) {
+            addresses.add(InetAddress.getByName("255.255.255.255"))
+        }
+        return addresses
     }
 
     fun startHosting(context: Context) {
@@ -43,12 +66,16 @@ object DiscoveryManager {
                 val socket = DatagramSocket()
                 socket.broadcast = true
                 val sendData = DISCOVERY_MSG.toByteArray()
-                val address = getBroadcastAddress(context)
                 
                 while (isActive) {
                     try {
-                        val packet = DatagramPacket(sendData, sendData.size, address, DISCOVERY_PORT)
-                        socket.send(packet)
+                        val addresses = getBroadcastAddresses(context)
+                        for (address in addresses) {
+                            try {
+                                val packet = DatagramPacket(sendData, sendData.size, address, DISCOVERY_PORT)
+                                socket.send(packet)
+                            } catch (e: Exception) {}
+                        }
                     } catch (e: Exception) {}
                     delay(2000) // broadcast every 2 seconds
                 }

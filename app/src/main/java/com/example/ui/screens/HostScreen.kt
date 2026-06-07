@@ -45,6 +45,8 @@ import com.example.utils.HotspotManager
 import com.example.utils.QrCodeUtils
 import androidx.compose.ui.text.style.TextAlign
 import android.graphics.Bitmap
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,7 +55,14 @@ fun HostScreen(
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val hostIp = remember { NetworkUtils.getLocalIpAddress(context) ?: "Unknown IP" }
+    var hostIp by remember { mutableStateOf(NetworkUtils.getLocalIpAddress(context) ?: "Unknown IP") }
+    
+    LaunchedEffect(Unit) {
+        while (true) {
+            hostIp = NetworkUtils.getLocalIpAddress(context) ?: "Unknown IP"
+            delay(2000)
+        }
+    }
     
     val connectedClients by viewModel.connectedClients.collectAsStateWithLifecycle()
     val statusMessage by viewModel.hostStatus.collectAsStateWithLifecycle()

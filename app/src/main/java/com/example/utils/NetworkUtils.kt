@@ -11,9 +11,22 @@ object NetworkUtils {
             val ipAddress = wifiManager.connectionInfo.ipAddress
             // If Wi-Fi is disconnected (ipAddress == 0), maybe we are the host. Iterate NetworkInterfaces.
             if (ipAddress == 0) {
-                return java.net.NetworkInterface.getNetworkInterfaces().toList().flatMap { it.inetAddresses.toList() }
-                    .firstOrNull { !it.isLoopbackAddress && it is java.net.Inet4Address && it.hostAddress?.startsWith("192.168.") == true }
-                    ?.hostAddress
+                val interfaces = java.net.NetworkInterface.getNetworkInterfaces().toList()
+                val validAddresses = interfaces.filter { 
+                    val name = it.name?.lowercase() ?: ""
+                    name.contains("wlan") || name.contains("ap") || name.contains("rndis") || name.contains("swlan")
+                }.flatMap { it.inetAddresses.toList() }
+                .filter { !it.isLoopbackAddress && it is java.net.Inet4Address }
+                
+                return validAddresses.firstOrNull()?.hostAddress 
+                    ?: interfaces.flatMap { it.inetAddresses.toList() }
+                        .filter { !it.isLoopbackAddress && it is java.net.Inet4Address }
+                        .firstOrNull { 
+                            val addr = it.hostAddress ?: ""
+                            !addr.startsWith("10.") && !addr.startsWith("100.")
+                        }?.hostAddress 
+                    ?: interfaces.flatMap { it.inetAddresses.toList() }
+                        .firstOrNull { !it.isLoopbackAddress && it is java.net.Inet4Address }?.hostAddress
             }
             return String.format(
                 Locale.US,

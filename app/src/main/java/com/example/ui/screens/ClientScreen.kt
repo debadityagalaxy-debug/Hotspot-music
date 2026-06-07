@@ -40,6 +40,18 @@ fun ClientScreen(
     val context = LocalContext.current
     var ipInput by remember { mutableStateOf(NetworkUtils.getDefaultGateway(context)) }
     
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(2000)
+            if (ipInput == "192.168.43.1" || ipInput == "0.0.0.0" || ipInput.isEmpty()) {
+                val gw = NetworkUtils.getDefaultGateway(context)
+                if (gw != "0.0.0.0") {
+                    ipInput = gw
+                }
+            }
+        }
+    }
+    
     val discoveredIp by com.example.utils.DiscoveryManager.discoveredHostIp.collectAsStateWithLifecycle()
     
     LaunchedEffect(discoveredIp) {

@@ -24,13 +24,54 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.viewmodel.ClientViewModel
 import com.example.ui.theme.*
+import androidx.activity.compose.rememberLauncherForActivityResult
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
+
+import androidx.compose.ui.platform.LocalContext
+import com.example.utils.NetworkUtils
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClientScreen(
     viewModel: ClientViewModel,
     onNavigateBack: () -> Unit
 ) {
-    var ipInput by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    var ipInput by remember { mutableStateOf(NetworkUtils.getDefaultGateway(context)) }
+    
+    val discoveredIp by com.example.utils.DiscoveryManager.discoveredHostIp.collectAsStateWithLifecycle()
+    
+    LaunchedEffect(discoveredIp) {
+        if (discoveredIp != null) {
+            ipInput = discoveredIp!!
+        }
+    }
+    
+    LaunchedEffect(Unit) {
+        com.example.utils.DiscoveryManager.startDiscovering()
+    }
+    
+    DisposableEffect(Unit) {
+        onDispose {
+            com.example.utils.DiscoveryManager.stopDiscovering()
+        }
+    }
+    
+    val scanLauncher = rememberLauncherForActivityResult(
+        contract = ScanContract()
+    ) { result ->
+        if (result.contents != null) {
+            val content = result.contents
+            if (content.startsWith("SYNCBEAT:")) {
+               ipInput = content.removePrefix("SYNCBEAT:")
+               viewModel.connect(ipInput.trim())
+            } else if (content.startsWith("WIFI:")) {
+               // Hint that they need to wait for wifi connection and use default gateway
+               ipInput = "192.168.43.1" // Common hotspot IP
+            }
+        }
+    }
     
     val connectionStatus by viewModel.connectionStatus.collectAsStateWithLifecycle()
     val trackName by viewModel.trackName.collectAsStateWithLifecycle()
@@ -133,7 +174,27 @@ fun ClientScreen(
                     ) {
                         Text("CONNECT TO HOST", color = ThemeOnPrimary, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     }
-                    // QR code scanning removed for a bit
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    OutlinedButton(
+                        onClick = { 
+                            val options = ScanOptions()
+                            options.setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                            options.setPrompt("Scan Host's QR Code")
+                            options.setCameraId(0)
+                            options.setBeepEnabled(false)
+                            options.setBarcodeImageEnabled(true)
+                            scanLauncher.launch(options)
+                        },
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = ThemePrimary)
+                    ) {
+                        Icon(Icons.Default.QrCodeScanner, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("SCAN QR CODE", fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    }
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             } else {

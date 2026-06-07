@@ -9,10 +9,15 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.host.AudioHost
 import com.example.models.LocalAudio
+import com.example.data.DatabaseProvider
+import com.example.data.Playlist
+import com.example.data.PlaylistRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class HostViewModel(application: Application) : AndroidViewModel(application) {
@@ -23,6 +28,27 @@ class HostViewModel(application: Application) : AndroidViewModel(application) {
     
     private val _localSongs = MutableStateFlow<List<LocalAudio>>(emptyList())
     val localSongs: StateFlow<List<LocalAudio>> = _localSongs.asStateFlow()
+
+    private val repository = PlaylistRepository(DatabaseProvider.getDatabase(application).playlistDao())
+
+    val allPlaylists: StateFlow<List<Playlist>> = repository.allPlaylists
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    fun savePlaylist(name: String, songs: List<LocalAudio>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.insert(Playlist.fromSongs(name, songs))
+        }
+    }
+
+    fun deletePlaylist(id: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.deleteById(id)
+        }
+    }
 
     fun fetchLocalSongs() {
         viewModelScope.launch(Dispatchers.IO) {

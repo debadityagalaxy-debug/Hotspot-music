@@ -37,6 +37,15 @@ import com.example.ui.viewmodel.HostViewModel
 import com.example.utils.NetworkUtils
 import com.example.ui.theme.*
 
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.foundation.Image
+import android.content.Context
+import androidx.compose.ui.window.Dialog
+import com.example.utils.HotspotManager
+import com.example.utils.QrCodeUtils
+import androidx.compose.ui.text.style.TextAlign
+import android.graphics.Bitmap
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HostScreen(
@@ -53,15 +62,27 @@ fun HostScreen(
     var isPlaying by remember { mutableStateOf(false) }
     
     var showMusicSheet by remember { mutableStateOf(false) }
+    var showHotspotDialog by remember { mutableStateOf(false) }
+    
+    val hotspotManager = remember { HotspotManager(context) }
+    val hotspotInfo by hotspotManager.hotspotInfo.collectAsStateWithLifecycle()
+    val hotspotError by hotspotManager.error.collectAsStateWithLifecycle()
     
     val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        listOf(android.Manifest.permission.READ_MEDIA_AUDIO)
+        listOf(android.Manifest.permission.READ_MEDIA_AUDIO, android.Manifest.permission.ACCESS_FINE_LOCATION)
     } else {
-        listOf(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+        listOf(android.Manifest.permission.READ_EXTERNAL_STORAGE, android.Manifest.permission.ACCESS_FINE_LOCATION)
     }
     
     LaunchedEffect(Unit) {
         viewModel.startServer()
+        com.example.utils.DiscoveryManager.startHosting(context)
+    }
+    
+    DisposableEffect(Unit) {
+        onDispose {
+            com.example.utils.DiscoveryManager.stopHosting()
+        }
     }
     
     val audioPicker = rememberLauncherForActivityResult(
@@ -78,6 +99,14 @@ fun HostScreen(
             trackName = name
             viewModel.setAudio(it, name)
             isPlaying = false
+        }
+    }
+    
+    val hotspotPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { perms ->
+        if (perms.values.all { it }) {
+             showHotspotDialog = true
         }
     }
     
@@ -129,6 +158,28 @@ fun HostScreen(
                 }
                 
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = {
+                            val hotspotPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.NEARBY_WIFI_DEVICES)
+                            } else {
+                                arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                            }
+                            val hasPermissions = hotspotPermissions.all { 
+                                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED 
+                            }
+                            
+                            if (hasPermissions) {
+                                showHotspotDialog = true
+                            } else {
+                                hotspotPermissionLauncher.launch(hotspotPermissions)
+                            }
+                        },
+                        modifier = Modifier.background(ThemeSurfaceVariant, CircleShape)
+                    ) {
+                        Icon(Icons.Default.WifiTethering, contentDescription = "Share Hotspot", tint = ThemeOnBackground)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
                     IconButton(
                         onClick = {
                             val hasPermission = permissions.all {
@@ -347,58 +398,90 @@ fun HostScreen(
     }
     
     if (showMusicSheet) {
-        val sheetState = rememberModalBottomSheetState()
-        ModalBottomSheet(
-            onDismissRequest = { showMusicSheet = false },
-            sheetState = sheetState,
-            containerColor = ThemeSurface,
-            contentColor = ThemeOnSurface
-        ) {
-            val songs by viewModel.localSongs.collectAsStateWithLifecycle()
-            Column(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
-                Text(
-                    "Local Music", 
-                    style = MaterialTheme.typography.titleLarge, 
-                    color = ThemeOnBackground,
-                    modifier = Modifier.padding(16.dp)
-                )
-                if (songs.isEmpty()) {
+        MusicSelectorDialog(
+            viewModel = viewModel,
+            onDismiss = { showMusicSheet = false },
+            onPlay = { song ->
+                viewModel.setAudio(song.uri, song.title)
+                trackName = song.title
+                isPlaying = false
+            }
+        )
+    }
+    
+    if (showHotspotDialog) {
+        Dialog(onDismissRequest = { showHotspotDialog = false }) {
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = ThemeSurface)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Text(
-                        "No music found. Use file picker instead?",
-                        color = ThemePrimary,
-                        modifier = Modifier
-                            .padding(16.dp)
-                            .clickable {
-                                showMusicSheet = false
-                                audioPicker.launch(arrayOf("audio/*"))
-                            }
+                        "Device Hotspot",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ThemeOnBackground
                     )
-                } else {
-                    LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                        items(songs) { song ->
-                            ListItem(
-                                headlineContent = { Text(song.title, color = ThemeOnBackground, maxLines = 1) },
-                                supportingContent = { Text(song.artist, color = ThemeOnSurfaceVariant, maxLines = 1) },
-                                leadingContent = { 
-                                    Box(
-                                        modifier = Modifier.size(40.dp).background(ThemePrimary.copy(alpha = 0.2f), CircleShape),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(Icons.Default.MusicNote, null, tint = ThemePrimary)
-                                    }
-                                },
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                modifier = Modifier.clickable {
-                                    viewModel.setAudio(song.uri, song.title)
-                                    trackName = song.title
-                                    isPlaying = false
-                                    showMusicSheet = false
-                                }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    if (hotspotInfo == null) {
+                        if (hotspotError != null) {
+                            Text(hotspotError!!, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center, fontSize = 14.sp)
+                            Spacer(modifier = Modifier.height(16.dp))
+                        } else {
+                            Text("If soft hotspot fails, turn on your device's Hotspot manually. Clients on the same network will discover the host automatically.", 
+                                 textAlign = TextAlign.Center, color = ThemeOnSurfaceVariant, fontSize = 14.sp)
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                        Button(
+                            onClick = { hotspotManager.startHotspot() },
+                            colors = ButtonDefaults.buttonColors(containerColor = ThemePrimary)
+                        ) {
+                            Text("Start Local Hotspot")
+                        }
+                    } else {
+                        val info = hotspotInfo!!
+                        // Construct the wifi string
+                        // format: WIFI:T:WPA;S:Mynetwork;P:mypass;;
+                        val wifiString = "WIFI:T:WPA;S:${info.ssid};P:${info.pass};;"
+                        val qrBitmap = remember(wifiString) { QrCodeUtils.generate(wifiString, 600) }
+                        
+                        Text("1. Scan this QR using camera to connect to Wi-Fi", textAlign = TextAlign.Center, color = ThemeOnSurfaceVariant)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        if (qrBitmap != null) {
+                            Image(
+                                bitmap = qrBitmap.asImageBitmap(),
+                                contentDescription = "QR Code",
+                                modifier = Modifier.size(200.dp).clip(RoundedCornerShape(8.dp))
                             )
                         }
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("SSID: ${info.ssid}\nPass: ${info.pass}", color = ThemeOnSurfaceVariant, textAlign = TextAlign.Center)
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("2. Host IP (enter in app): $hostIp", fontWeight = FontWeight.Bold, color = ThemeOnBackground)
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        OutlinedButton(
+                            onClick = { hotspotManager.stopHotspot() },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = ThemePrimary)
+                        ) {
+                            Text("Stop Hotspot")
+                        }
+                    }
+                    
+                    TextButton(onClick = { showHotspotDialog = false }) {
+                        Text("Close", color = ThemePrimary)
                     }
                 }
             }
         }
     }
 }
+

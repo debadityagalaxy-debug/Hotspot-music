@@ -381,9 +381,9 @@ fun HostScreen(
                             IconButton(onClick = {
                                 if (trackName != "No song selected") {
                                     if (isPlaying) {
-                                        viewModel.pause(0)
+                                        viewModel.pause()
                                     } else {
-                                        viewModel.play(0) 
+                                        viewModel.play() 
                                     }
                                     isPlaying = !isPlaying
                                 }

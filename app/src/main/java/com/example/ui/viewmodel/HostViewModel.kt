@@ -89,8 +89,8 @@ class HostViewModel(application: Application) : AndroidViewModel(application) {
     
     fun startServer(port: Int = 8080) { audioHost.startServer(port) }
     fun setAudio(uri: Uri, title: String) { audioHost.setAudio(uri, title) }
-    fun play(position: Long) { audioHost.play(position) }
-    fun pause(position: Long) { audioHost.pause(position) }
+    fun play() { audioHost.play() }
+    fun pause() { audioHost.pause() }
     
     override fun onCleared() {
         super.onCleared()

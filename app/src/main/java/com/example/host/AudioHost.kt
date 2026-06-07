@@ -18,9 +18,17 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.util.Collections
 
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
+
 class AudioHost(private val appContext: Context) {
     private var server: ApplicationEngine? = null
-    val localPlayer: ExoPlayer = ExoPlayer.Builder(appContext).build()
+    val localPlayer: ExoPlayer = ExoPlayer.Builder(appContext)
+        .setAudioAttributes(AudioAttributes.Builder()
+            .setUsage(C.USAGE_MEDIA)
+            .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+            .build(), true)
+        .build()
     
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val sessions = Collections.synchronizedSet(LinkedHashSet<DefaultWebSocketServerSession>())
@@ -124,33 +132,31 @@ class AudioHost(private val appContext: Context) {
                         input.copyTo(output)
                     }
                 }
+                
+                withContext(Dispatchers.Main) {
+                    localPlayer.stop()
+                    localPlayer.clearMediaItems()
+                    try {
+                        val mediaItem = MediaItem.fromUri(Uri.fromFile(tempFile))
+                        localPlayer.setMediaItem(mediaItem)
+                        localPlayer.prepare()
+                        broadcastState()
+                    } catch (e: Exception) {}
+                }
             } catch(e: Exception) {}
-        }
-        
-        scope.launch(Dispatchers.Main) {
-            localPlayer.stop()
-            localPlayer.clearMediaItems()
-            try {
-                val mediaItem = MediaItem.fromUri(uri)
-                localPlayer.setMediaItem(mediaItem)
-                localPlayer.prepare()
-                broadcastState()
-            } catch (e: Exception) {}
         }
     }
     
-    fun play(position: Long) {
+    fun play() {
         scope.launch(Dispatchers.Main) {
-            localPlayer.seekTo(position)
             localPlayer.play()
             broadcastState()
         }
     }
     
-    fun pause(position: Long) {
+    fun pause() {
         scope.launch(Dispatchers.Main) {
             localPlayer.pause()
-            localPlayer.seekTo(position)
             broadcastState()
         }
     }
